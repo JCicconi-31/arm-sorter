@@ -1,0 +1,5 @@
+# Requisiti del progetto arm-sorter
+# Python 3.14.7 (la versione di Python va installata a sistema, non tramite pip)
+
+opencv-python==5.1.0.95
+numpy==2.5.5

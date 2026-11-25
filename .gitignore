@@ -85,3 +85,14 @@ yarn-error.log*
 pnpm-debug.log*
 .next/
 .vite/
+
+# === AI ===
+.codex/
+.claude/
+.gemini/
+.ollama/
+.groq/
+
+/Simulazioni3D
+
+demo.mp4
