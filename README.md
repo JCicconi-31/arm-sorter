@@ -24,7 +24,7 @@ A 3D-printed 4-DOF robotic arm that sorts colored objects into bins, guided by a
 
 ## Step 1: color detection
 
-`color_center.py` finds the largest object of a given color in the webcam feed and marks its centroid.
+`tools/color_tuner.py` finds the largest object of a given color in the webcam feed and marks its centroid.
 
 Each frame goes through this pipeline:
 
@@ -37,10 +37,15 @@ Each frame goes through this pipeline:
 
 ### Run it
 
+Requires Python 3.12+.
+
 ```bash
-pip install -r requirements.txt
-python color_center.py
+pip install -e ".[dev]"
+python tools/color_tuner.py      # optional: webcam index, e.g. 1
+python -m pytest                 # tests run on synthetic images, no webcam needed
 ```
+
+The detection logic lives in `src/arm_sorter/vision/color.py`; the script only handles the webcam and the sliders.
 
 Three windows open:
 
