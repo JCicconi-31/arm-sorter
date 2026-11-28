@@ -8,7 +8,7 @@ import sys
 import cv2
 import numpy as np
 
-from arm_sorter.vision import find_object
+from arm_sorter.vision import find_object, HSVRange
 
 cam_index = int(sys.argv[1]) if len(sys.argv) > 1 else 0  # 0 = webcam portatile
 cap = cv2.VideoCapture(cam_index)
@@ -41,9 +41,14 @@ while True:
     if not ok:
         break
 
-    lo = np.array([g("H min"), g("S min"), g("V min")])
-    hi = np.array([g("H max"), g("S max"), g("V max")])
-    blob, mask, hsv = find_object(frame, lo, hi)
+    try:
+        r = HSVRange(g("H min"), g("H max"), g("S min"), g("S max"), g("V min"), g("V max"))
+        blob, mask, hsv = find_object(frame, r)
+    except ValueError as e:
+        # barre incrociate (es. S min > S max): mostro l'errore invece di chiudere il tuner
+        blob = None
+        mask = np.zeros(frame.shape[:2], np.uint8)
+        cv2.putText(frame, str(e), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (23, 209, 48), 2)
 
     if blob is not None:
         #rettangolo intorno all'oggetto identificato (magenta, si vede anche sul giallo)

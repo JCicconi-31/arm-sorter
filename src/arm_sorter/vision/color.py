@@ -29,6 +29,29 @@ class Blob:
     area: float
 
 
+@dataclass(frozen=True)
+class HSVRange:
+    h_min: int
+    h_max: int
+    s_min: int
+    s_max: int
+    v_min: int
+    v_max: int
+
+    def __post_init__(self):
+        
+        for name, lo, hi, limit in (
+            ("h", self.h_min, self.h_max, 179),
+            ("s", self.s_min, self.s_max, 255),
+            ("v", self.v_min, self.v_max, 255),
+        ):
+            if not (0 <= lo <= limit) or not (0 <= hi <= limit):
+                raise ValueError(
+                    f"{name}_min e {name}_max devono essere in [0, {limit}], ricevuto ({lo}, {hi})"
+                )
+            if name != "h" and lo > hi:
+                    raise ValueError(f"{name}_min ({lo}) maggiore di {name}_max ({hi})")
+
 def to_hsv(frame_bgr: np.ndarray) -> np.ndarray:
     """Ammorbidisce con GaussianBlur (sennò i bordi tremano) e converte in HSV.
 
@@ -38,12 +61,21 @@ def to_hsv(frame_bgr: np.ndarray) -> np.ndarray:
     return cv2.cvtColor(cv2.GaussianBlur(frame_bgr, (7, 7), 0), cv2.COLOR_BGR2HSV)
 
 
-def color_mask(hsv: np.ndarray, lo, hi) -> np.ndarray:
-    """Maschera binaria: bianco i pixel dentro [lo, hi], nero il resto."""
-    mask = cv2.inRange(hsv, np.asarray(lo), np.asarray(hi))
-    # prima apertura poi chiusura, al contrario il rumore verrebbe ingrandito invece che tolto
+def color_mask(hsv: np.ndarray, r: HSVRange) -> np.ndarray:
+    """ Crezione della maschera in base al colore che rileva"""
+    if r.h_min <= r.h_max:
+        lo_1 = np.array((r.h_min, r.s_min, r.v_min))
+        hi_1 = np.array((r.h_max, r.s_max, r.v_max))
+        mask = cv2.inRange(hsv, lo_1, hi_1)
+    else:
+        # la hue è un cerchio (0–179) e il rosso sta a cavallo dello 0, quindi due intervalli        
+        lo_1 = np.array((0, r.s_min, r.v_min))
+        hi_1 = np.array((r.h_max, r.s_max, r.v_max))
+        lo_2 = np.array((r.h_min, r.s_min, r.v_min))
+        hi_2 = np.array((179, r.s_max, r.v_max))
+        mask = cv2.bitwise_or(cv2.inRange(hsv, lo_1, hi_1), cv2.inRange(hsv, lo_2, hi_2))
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, KERNEL)   # toglie i puntini
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, KERNEL)  # chiude i buchi
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, KERNEL)  # toglie i buchi
     return mask
 
 
@@ -64,8 +96,8 @@ def largest_blob(mask: np.ndarray, min_area: float = MIN_AREA) -> Blob | None:
     return Blob(cx, cy, x, y, w, h, area)
 
 
-def find_object(frame_bgr: np.ndarray, lo, hi, min_area: float = MIN_AREA):
+def find_object(frame_bgr: np.ndarray, r: HSVRange, min_area: float = MIN_AREA):
     """Pipeline completa. Restituisce (blob o None, maschera, immagine HSV)."""
     hsv = to_hsv(frame_bgr)
-    mask = color_mask(hsv, lo, hi)
+    mask = color_mask(hsv, r)
     return largest_blob(mask, min_area), mask, hsv

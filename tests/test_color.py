@@ -3,12 +3,13 @@
 import cv2
 import numpy as np
 
-from arm_sorter.vision import find_object, largest_blob
+from arm_sorter.vision import find_object, largest_blob, HSVRange
 
 # soglie per il giallo, le stesse di partenza di tools/color_tuner.py
 LO = (20, 100, 100)
 HI = (35, 255, 255)
-YELLOW_BGR = (0, 255, 255)
+YELLOW_BGR = (0, 255, 255) 
+YELLOW = HSVRange(20, 35, 100, 255, 100, 255)
 
 
 def blank(h=240, w=320):
@@ -18,7 +19,7 @@ def blank(h=240, w=320):
 def test_finds_centroid_of_yellow_square():
     img = blank()
     cv2.rectangle(img, (100, 50), (160, 110), YELLOW_BGR, -1)  # centro (130, 80)
-    blob, mask, _ = find_object(img, LO, HI)
+    blob, mask, _ = find_object(img, YELLOW)
     assert blob is not None
     assert abs(blob.cx - 130) <= 1 and abs(blob.cy - 80) <= 1
     assert mask.dtype == np.uint8 and mask.shape == img.shape[:2]
@@ -27,7 +28,7 @@ def test_finds_centroid_of_yellow_square():
 def test_ignores_other_colors():
     img = blank()
     cv2.rectangle(img, (100, 50), (160, 110), (255, 0, 0), -1)  # blu
-    blob, _, _ = find_object(img, LO, HI)
+    blob, _, _ = find_object(img, YELLOW)
     assert blob is None
 
 
@@ -35,7 +36,7 @@ def test_picks_largest_of_two():
     img = blank()
     cv2.rectangle(img, (10, 10), (40, 40), YELLOW_BGR, -1)     # piccolo
     cv2.rectangle(img, (150, 100), (250, 200), YELLOW_BGR, -1)  # grande, centro (200, 150)
-    blob, _, _ = find_object(img, LO, HI)
+    blob, _, _ = find_object(img, YELLOW)
     assert blob is not None
     assert abs(blob.cx - 200) <= 1 and abs(blob.cy - 150) <= 1
 
